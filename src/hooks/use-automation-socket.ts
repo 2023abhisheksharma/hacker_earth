@@ -18,8 +18,9 @@ export function useAutomationSocket() {
 
   useEffect(() => {
     if (!sessionId) return;
-    const socket = io("/?XTransformPort=3004", {
+    const socket = io({
       path: "/",
+      query: { XTransformPort: "3004" },
       transports: ["websocket", "polling"],
       reconnection: true,
     });

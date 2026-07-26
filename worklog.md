@@ -120,3 +120,41 @@ Stage Summary:
   - **Browser binary**: Chromium downloaded to /home/z/.cache/ms-playwright/chromium-1234 (~300MB). If this is wiped, `bunx playwright install chromium` must be re-run.
   - **socket.io-client** is in dependencies (only used by the test scripts in tests/); orchestrator can remove it if desired.
   - Test files left in mini-services/playwright-service/tests/ for orchestrator verification — not required for production.
+
+---
+Task ID: 3-6
+Agent: orchestrator
+Task: Frontend, backend API routes, Playwright integration, end-to-end verification
+
+Work Log:
+- Built full design system: emerald/teal palette (no blue/indigo), dark mode support, custom scrollbar
+- Login screen: email-only auth, no passwords, privacy-first messaging
+- Dashboard: header, 4 stat cards, tabbed Benefits/Transactions/Claims views
+- Parser panel: SMS/email ingestion with sample loader
+- Benefit list: 16 detected benefits with confidence bars, coverage amounts, filing windows
+- Transaction list: sortable table with category badges, benefit links
+- Claim detail sheet: pre-filled 11-field form, document upload (image/pdf/text), automation panel
+- Automation panel: live socket.io streaming of 8 Playwright steps with screenshots
+- Claim history: filed claims with status badges
+- Backend API: auth (login/logout/me), cards, transactions, transactions/parse, benefits, claims (CRUD), claims/[id]/submit, claims/[id]/documents, stats, seed
+- Fixed Next.js 16 cookie pattern: set cookies on NextResponse (not via next/headers cookies().set())
+- Fixed socket.io gateway routing: use query option instead of URL query string
+- Fixed seed dates: generate relative to current date so all benefits fall within filing windows
+- Fixed SMS merchant parser: strip trailing bank-script fragments
+- All services verified through Caddy gateway (port 81)
+
+Stage Summary:
+- Full golden path verified via Agent Browser through gateway (port 81):
+  1. Login with email -> session cookie set
+  2. Auto-seed: 5 cards, 9 transactions, 16 benefits detected
+  3. Click benefit -> pre-filled 11-field claim form in sheet
+  4. Upload document (txt) -> attached to claim
+  5. Click "Auto-submit claim" -> Playwright launches, navigates to mock HDFC portal,
+     logs in (simulated), fills 11 fields, uploads docs, submits -> reference HDFC-CLM-MS264CGB-HSI0
+  6. 6 screenshots captured, 8 steps streamed live via socket.io
+  7. Claims tab shows filed claims with status
+- Lint: clean (0 errors)
+- Footer: sticky on short pages, pushed naturally on long pages
+- Mobile responsive: tested at 390x844
+- No bank credentials stored: user logs in to bank portal inside Playwright browser session
+- Services: Next.js (3000), Playwright (3004), Mock portal (3005), Gateway (81)
