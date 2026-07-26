@@ -382,10 +382,8 @@ function htmlPage(params: { bank: string; bankUrl?: string }): string {
         statusPill.textContent = 'Connecting…';
         statusPill.classList.add('live');
       }
-      // Connect to the Playwright service socket.io via the same gateway
-      // that served this page. window.location.origin is the gateway (port 81
-      // in production), and ?XTransformPort=3004 routes to the Playwright svc.
-      var socket = io(window.location.origin, { path: '/', query: { XTransformPort: '3004' }, transports: ['websocket','polling'] });
+      var targetHost = window.location.protocol + '//' + window.location.hostname + ':3004';
+      var socket = io(targetHost, { path: '/', transports: ['websocket','polling'] });
       socket.on('connect', function() {
         socket.emit('join', sessionId);
         if (statusPill) statusPill.textContent = 'Waiting for engine…';
@@ -446,34 +444,38 @@ function htmlPage(params: { bank: string; bankUrl?: string }): string {
 </html>`;
 }
 
-const server = Bun.serve({
-  port: PORT,
-  fetch(req) {
-    const url = new URL(req.url);
-    const withCors = (body: BodyInit, init: ResponseInit = {}) => {
-      const headers = new Headers(init.headers || {});
-      for (const [k, v] of Object.entries(CORS_HEADERS)) headers.set(k, v);
-      return new Response(body, { ...init, headers });
-    };
-    if (req.method === "OPTIONS") return withCors("", { status: 204 });
+import { createServer, IncomingMessage, ServerResponse } from "http";
 
-    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-      const bank = url.searchParams.get("bank") || "Your Bank";
-      const bankUrl = url.searchParams.get("bankUrl") || undefined;
-      return withCors(htmlPage({ bank, bankUrl }), {
-        status: 200,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
-    }
-    if (req.method === "GET" && url.pathname === "/api/health") {
-      return withCors(JSON.stringify({ ok: true, service: "claim-form-demo" }), {
-        status: 200, headers: { "Content-Type": "application/json" },
-      });
-    }
-    return withCors(JSON.stringify({ ok: false, error: "Not found" }), {
-      status: 404, headers: { "Content-Type": "application/json" },
-    });
-  },
+const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+  for (const [k, v] of Object.entries(CORS_HEADERS)) res.setHeader(k, v);
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  const url = new URL(req.url || "/", `http://localhost:${PORT}`);
+
+  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
+    const bank = url.searchParams.get("bank") || "Your Bank";
+    const bankUrl = url.searchParams.get("bankUrl") || undefined;
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(htmlPage({ bank, bankUrl }));
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true, service: "claim-form-demo" }));
+    return;
+  }
+
+  res.writeHead(404, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ ok: false, error: "Not found" }));
 });
 
-console.log(`[claim-form-demo] serving on http://localhost:${server.port} (accepts ?bank=<name>)`);
+server.listen(PORT, () => {
+  console.log(`[claim-form-demo] serving on http://localhost:${PORT} (accepts ?bank=<name>)`);
+});
+

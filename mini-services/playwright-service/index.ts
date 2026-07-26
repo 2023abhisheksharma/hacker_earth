@@ -33,7 +33,7 @@ import * as path from "path";
 import * as fs from "fs";
 
 const PORT = 3004;
-const UPLOADS_ROOT = "/home/z/my-project/uploads";
+const UPLOADS_ROOT = process.env.UPLOADS_ROOT || path.resolve(__dirname, "../../uploads");
 
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
