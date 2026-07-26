@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Loader2, XCircle, Clock, Play, Camera } from "lucide-react";
+import { CheckCircle2, Loader2, XCircle, Clock, Play, Camera, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/store/app-store";
@@ -27,6 +27,7 @@ export function AutomationPanel() {
   useAutomationSocket();
   const steps = useAppStore((s) => s.automationSteps);
   const sessionId = useAppStore((s) => s.automationSessionId);
+  const liveFormUrl = useAppStore((s) => s.liveFormUrl);
   const [showShot, setShowShot] = useState<string | null>(null);
 
   if (!sessionId && steps.length === 0) {
@@ -60,9 +61,21 @@ export function AutomationPanel() {
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="text-[10px] gap-1">
-            <Camera className="h-3 w-3" /> {steps.filter((s) => s.screenshot).length} screenshots
-          </Badge>
+          <div className="flex items-center gap-2">
+            {liveFormUrl && (
+              <a
+                href={liveFormUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:underline rounded-full border border-primary/30 px-2 py-1 transition hover:bg-primary/5"
+              >
+                <ExternalLink className="h-3 w-3" /> View live form
+              </a>
+            )}
+            <Badge variant="outline" className="text-[10px] gap-1">
+              <Camera className="h-3 w-3" /> {steps.filter((s) => s.screenshot).length} screenshots
+            </Badge>
+          </div>
         </div>
       </div>
 

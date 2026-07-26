@@ -286,3 +286,37 @@ Stage Summary:
   - The demo form is clearly labeled, not disguised as a real bank
   - Documents are really uploaded via the file input
 - Lint: clean
+
+---
+Task ID: 11
+Agent: orchestrator
+Task: Add live form-filling tab — user watches the form fill up in real-time
+
+Work Log:
+- Added socket.io client (CDN) to the claim form demo page (mini-services/mock-portal)
+- Demo form connects to the Playwright service socket.io via the Caddy gateway (port 81 with XTransformPort=3004)
+- Listens for `fill:field` events {key, label, value, type} and fills each field live:
+  - Locates input by #id, [name=], or label text
+  - Types the value character-by-character (25ms/char) for a visible typing effect
+  - Highlights the field green while filling (.filling class)
+  - Marks it filled (.filled class) when done
+  - Scrolls each field into view
+- Status pill in the header updates live: "Connecting…" → "Waiting for engine…" → "Filling claim form…" → "Stopped before submission ✓"
+- Added "View live form" button in the automation panel (links to the demo form with session param)
+- Playwright service emits `fill:field` events to the room as it fills each field (400ms delay between fields so the live tab keeps up)
+- Updated store: added liveFormUrl field, resetAutomation clears it
+- Frontend: opens demo form with ?session=<sessionId>&bank=<name>&bankUrl=<realBankUrl> in a new tab
+- Demo form page includes a link to the real bank website ("↗ Open the real <Bank> website")
+
+Stage Summary:
+- Verified via Agent Browser (Axis SAMSUNG benefit):
+  1. Click "Open bank & prepare claim" → demo form opens in new tab with session ID
+  2. Demo form connects to socket.io, status shows "Waiting for engine…"
+  3. As Playwright fills fields, the visible tab mirrors it live:
+     - 10 fields filled with real values (email, mobile, card_last4, merchant, txn_date, amount, etc.)
+     - Each field types-animates and highlights green
+     - Status pill updates: "Filling claim form…" → "Stopped before submission ✓"
+  4. App's automation panel shows "View live form" button to re-open the tab
+  5. 7 screenshots also captured as evidence
+- The user can now WATCH the form fill up live in a visible browser tab, not just see screenshots
+- Lint: clean

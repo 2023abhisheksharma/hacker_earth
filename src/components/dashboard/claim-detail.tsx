@@ -134,13 +134,17 @@ export function ClaimDetail() {
         { method: "POST" }
       );
       useAppStore.getState().setAutomationSessionId(res.sessionId);
-      // Open the REAL bank site in a new tab so the user can see it.
-      if (res.portalUrl) {
-        window.open(res.portalUrl, "_blank", "noopener,noreferrer");
+      // Open the claim form demo with the session ID so the user can watch
+      // the form fill up LIVE in a visible tab. The page connects to socket.io
+      // and mirrors each field as Playwright fills it.
+      if (res.demoFormUrl) {
+        const liveUrl = `${res.demoFormUrl}&session=${res.sessionId}`;
+        useAppStore.getState().setLiveFormUrl(liveUrl);
+        window.open(liveUrl, "_blank", "noopener,noreferrer");
       }
       toast({
-        title: `${res.bankName} portal opened`,
-        description: "The real bank site opened in a new tab. The engine is filling the claim form demo live — watch the panel below.",
+        title: "Live form-filling started",
+        description: "A tab opened showing the claim form — watch it fill up live. The real bank site is linked inside.",
       });
     } catch (e) {
       toast({ title: "Submit failed", description: e instanceof Error ? e.message : "", variant: "destructive" });

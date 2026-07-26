@@ -27,7 +27,9 @@ interface AppState {
   // automation progress (Playwright)
   automationSteps: AutomationStep[];
   automationSessionId: string | null;
+  liveFormUrl: string | null;
   setAutomationSessionId: (id: string | null) => void;
+  setLiveFormUrl: (url: string | null) => void;
   upsertStep: (step: AutomationStep) => void;
   resetAutomation: () => void;
 
@@ -53,7 +55,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   automationSteps: [],
   automationSessionId: null,
+  liveFormUrl: null,
   setAutomationSessionId: (id) => set({ automationSessionId: id }),
+  setLiveFormUrl: (url) => set({ liveFormUrl: url }),
   upsertStep: (step) =>
     set((s) => {
       const idx = s.automationSteps.findIndex((x) => x.step === step.step);
@@ -63,7 +67,7 @@ export const useAppStore = create<AppState>((set) => ({
       next.sort((a, b) => a.step - b.step);
       return { automationSteps: next };
     }),
-  resetAutomation: () => set({ automationSteps: [], automationSessionId: null }),
+  resetAutomation: () => set({ automationSteps: [], automationSessionId: null, liveFormUrl: null }),
 
   refreshNonce: 0,
   bumpRefresh: () => set((s) => ({ refreshNonce: s.refreshNonce + 1 })),

@@ -24,8 +24,9 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function htmlPage(bank: string): string {
-  const bankSafe = escapeHtml(bank || "Your Bank");
+function htmlPage(params: { bank: string; bankUrl?: string }): string {
+  const bank = params.bank || "Your Bank";
+  const bankSafe = escapeHtml(bank);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,6 +81,23 @@ function htmlPage(bank: string): string {
       content: ""; width: 8px; height: 8px; border-radius: 50%;
       background: var(--amber-400); box-shadow: 0 0 6px var(--amber-400);
     }
+    .ready-pill.live { background: rgba(16, 185, 129, 0.25); }
+    .ready-pill.live::before { background: var(--emerald-500); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* Field fill animation */
+    input.filling, select.filling, textarea.filling {
+      border-color: var(--emerald-500) !important;
+      box-shadow: 0 0 0 4px rgba(16,185,129,0.2) !important;
+      background: var(--emerald-50) !important;
+      transition: all 0.2s;
+    }
+    input.filled, select.filled, textarea.filled {
+      border-color: var(--emerald-500) !important;
+      background: var(--emerald-50) !important;
+    }
+    .field-flash { animation: flash 0.6s; }
+    @keyframes flash { 0% { background: rgba(16,185,129,0.3); } 100% { background: var(--emerald-50); } }
 
     main { max-width: 880px; margin: 24px auto; padding: 0 20px 80px; }
     .info-card {
@@ -156,7 +174,7 @@ function htmlPage(bank: string): string {
         <p>Purchase &middot; Return &middot; Travel Delay &middot; Lost Baggage &middot; Warranty</p>
       </div>
     </div>
-    <div class="ready-pill">Form ready</div>
+    <div class="ready-pill" id="status-pill">Form ready</div>
   </header>
 
   <main>
@@ -164,6 +182,8 @@ function htmlPage(bank: string): string {
       <strong>About this demo:</strong> This form has the same fields as ${bankSafe}&rsquo;s real claim form.
       The Playwright engine fills it live to demonstrate the form-filling capability. In production, the engine
       fills the bank&rsquo;s actual authenticated claim form after the card member logs in. <strong>Submission is disabled</strong> — no claim is filed.
+      <br/><br/>
+      <a href="${escapeHtml(params.bankUrl || "#")}" target="_blank" rel="noopener" style="color: var(--emerald-700); font-weight: 600; text-decoration: none;">↗ Open the real ${bankSafe} website</a>
     </div>
 
     <section id="claim-section" class="card">
@@ -345,6 +365,83 @@ function htmlPage(bank: string): string {
       });
     })();
   </script>
+
+  <!-- Live form-filling: connects to the Playwright service socket.io and
+       mirrors the field-filling in real time so the user can watch. -->
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var sessionId = params.get('session');
+      var statusPill = document.getElementById('status-pill');
+      if (!sessionId || typeof io === 'undefined') {
+        if (statusPill) statusPill.textContent = 'Form ready';
+        return;
+      }
+      if (statusPill) {
+        statusPill.textContent = 'Connecting…';
+        statusPill.classList.add('live');
+      }
+      // Connect to the Playwright service socket.io via the Caddy gateway
+      // (port 81). The gateway forwards ?XTransformPort=3004 to the service.
+      var gateway = window.location.protocol + '//' + window.location.hostname + ':81';
+      var socket = io(gateway, { path: '/', query: { XTransformPort: '3004' }, transports: ['websocket','polling'] });
+      socket.on('connect', function() {
+        socket.emit('join', sessionId);
+        if (statusPill) statusPill.textContent = 'Waiting for engine…';
+      });
+      socket.on('automation:step', function(ev) {
+        // Update status pill based on step
+        if (statusPill && ev.action) {
+          if (ev.status === 'running') statusPill.textContent = ev.action + '…';
+          else if (ev.status === 'done') statusPill.textContent = ev.action + ' ✓';
+          else if (ev.status === 'failed') { statusPill.textContent = ev.action + ' ✗'; statusPill.classList.remove('live'); }
+        }
+      });
+      socket.on('fill:field', function(data) {
+        // data: { key, label, value, type }
+        try {
+          var el = document.querySelector('#' + data.key + ', [name="' + data.key + '"]');
+          if (!el && data.label) {
+            // Fallback: find label with matching text, then its associated input
+            var labels = Array.from(document.querySelectorAll('label'));
+            var lbl = labels.find(function(l){ return l.textContent.indexOf(data.label) === 0; });
+            if (lbl) {
+              var forId = lbl.getAttribute('for');
+              if (forId) el = document.getElementById(forId);
+            }
+          }
+          if (!el) return;
+          el.classList.add('filling');
+          // Animate the value being typed in
+          if (el.tagName === 'SELECT') {
+            el.value = data.value;
+            el.classList.add('filled');
+          } else {
+            // Type character by character for a visible effect
+            var val = data.value || '';
+            var i = 0;
+            el.value = '';
+            el.focus();
+            var iv = setInterval(function() {
+              el.value = val.slice(0, i);
+              i++;
+              if (i > val.length) {
+                clearInterval(iv);
+                el.classList.remove('filling');
+                el.classList.add('filled');
+              }
+            }, 25);
+          }
+          // Scroll the field into view
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch(e) { /* ignore */ }
+      });
+      socket.on('disconnect', function() {
+        if (statusPill) statusPill.textContent = 'Disconnected';
+      });
+    })();
+  </script>
 </body>
 </html>`;
 }
@@ -362,7 +459,8 @@ const server = Bun.serve({
 
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       const bank = url.searchParams.get("bank") || "Your Bank";
-      return withCors(htmlPage(bank), {
+      const bankUrl = url.searchParams.get("bankUrl") || undefined;
+      return withCors(htmlPage({ bank, bankUrl }), {
         status: 200,
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });

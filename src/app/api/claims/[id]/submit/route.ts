@@ -33,8 +33,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const sessionId = randomUUID();
     const bankName = claim.portalBank ?? "Your Bank";
     const portalUrl = claim.portalUrl ?? "https://www.hdfcbank.com/";
-    // Claim form demo URL — personalizes to the bank
-    const demoFormUrl = `http://localhost:3005/?bank=${encodeURIComponent(bankName)}`;
+    // Claim form demo URL — personalizes to the bank + includes the real bank
+    // URL so the demo page can link to it.
+    const demoFormUrl = `http://localhost:3005/?bank=${encodeURIComponent(bankName)}&bankUrl=${encodeURIComponent(portalUrl)}`;
 
     // mark submitting
     await db.claim.update({

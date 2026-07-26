@@ -395,6 +395,19 @@ async function runAutomation(payload: RunRequest): Promise<void> {
         }
         filled++;
 
+        // Emit a fill:field event so the user's visible demo-form tab can
+        // mirror the filling in real time.
+        try {
+          io.to(sessionId).emit("fill:field", {
+            key: field.key,
+            label: field.label,
+            value: field.value,
+            type: field.type,
+          });
+        } catch (e) {
+          console.warn("[emit fill:field] failed:", e);
+        }
+
         // Send a progress screenshot at the halfway point.
         if (!halfwayShotSent && filled >= halfway) {
           const shot = await takeScreenshot(page);
@@ -408,7 +421,7 @@ async function runAutomation(payload: RunRequest): Promise<void> {
           halfwayShotSent = true;
         }
         // Small delay so the filling is visible in the stream.
-        await page.waitForTimeout(150);
+        await page.waitForTimeout(400);
       } catch {
         skipped++;
       }
