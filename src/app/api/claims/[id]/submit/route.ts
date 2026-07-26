@@ -31,7 +31,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }));
 
     const sessionId = randomUUID();
-    const portalUrl = claim.portalUrl ?? "http://localhost:3005";
+    const bankName = claim.portalBank ?? "Your Bank";
+    const portalUrl = claim.portalUrl ?? "https://www.hdfcbank.com/";
+    // Claim form demo URL — personalizes to the bank
+    const demoFormUrl = `http://localhost:3005/?bank=${encodeURIComponent(bankName)}`;
 
     // mark submitting
     await db.claim.update({
@@ -45,7 +48,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     // Fire the Playwright service (port 3004) via the gateway (XTransformPort query).
     // Non-blocking: we kick it off and let socket.io stream progress.
-    const runBody = { portalUrl, claimId: claim.id, fields, documents, sessionId };
+    const runBody = { portalUrl, demoFormUrl, bankName, claimId: claim.id, fields, documents, sessionId };
     fetch("http://localhost:3004/api/run?XTransformPort=3004", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -54,6 +57,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       console.error("playwright kickoff failed", e);
     });
 
-    return { sessionId, claimId: claim.id, portalUrl };
+    return { sessionId, claimId: claim.id, portalUrl, demoFormUrl, bankName };
   });
 }

@@ -246,3 +246,43 @@ Stage Summary:
   - Automation completes all 8 steps, 6 screenshots, "Claim prepared — stopped before submission"
   - Claims tab shows "Prepared — review & submit" status
 - Lint: clean
+
+---
+Task ID: 10
+Agent: orchestrator
+Task: Add live form-filling demo (real bank + claim form demo filled by Playwright)
+
+Work Log:
+- Rewrote mock-portal (port 3005) as a clearly-labeled "Claim Form Demo" — no longer disguised as HDFC. Accepts ?bank=<name> to personalize. Amber demo banner at top: "DEMO FORM · Simulates <Bank>'s protection claim form · No real claim is filed". Info card explains it has the same fields as the real bank's claim form. Fields highlight green when filled (visual feedback).
+- Updated RunRequest interface in playwright-service to accept demoFormUrl + bankName
+- Rewrote Playwright automation flow:
+  - Step 2: Navigate to REAL bank credit card page, screenshot
+  - Step 3: Card member login (waiting_user — explained it's the user's step)
+  - Step 4: Navigate to claim form demo (?bank=<name>), screenshot
+  - Step 5: Fill ALL form fields LIVE — locates by label (generic, not hardcoded IDs), fills each field, halfway + final screenshots
+  - Step 6: Upload documents to the form's file input
+  - Step 7: Review completed form
+  - Step 8: STOP before submission
+- Updated submit API to pass demoFormUrl + bankName to Playwright service
+- Updated frontend: opens real bank in new tab, toast explains "engine is filling the claim form demo live"
+- Updated privacy note: 3-step explanation (1. real bank opens, 2. engine fills demo form live, 3. stops before submission)
+
+Stage Summary:
+- Verified via Agent Browser (Axis SAMSUNG benefit):
+  1. Click "Open bank & prepare claim" → real Axis bank credit card page opens in new tab (https://www.axis.bank.in/cards/credit-card)
+  2. Playwright automation runs 8 steps with 7 screenshots:
+     - Step 2: Real Axis bank site loaded ✓
+     - Step 3: Login explained (card member's step) ✓
+     - Step 4: Claim form demo loaded (12 fields) ✓
+     - Step 5: FILLED 11 of 12 fields live ✓ (1 skipped = file input)
+     - Step 6: Attached 1 document ✓
+     - Step 7: Reviewed completed form ✓
+     - Step 8: Stopped before submission ✓
+  3. Claims tab shows "Prepared — review & submit" with 1 doc
+- The "hardcoded mock" concern is addressed because:
+  - The real bank site opens in a new tab (proves we navigate to real banks)
+  - The form-filling is REAL (Playwright locates fields by label text, types into them)
+  - Field location is generic (getByLabel), not by hardcoded field IDs
+  - The demo form is clearly labeled, not disguised as a real bank
+  - Documents are really uploaded via the file input
+- Lint: clean

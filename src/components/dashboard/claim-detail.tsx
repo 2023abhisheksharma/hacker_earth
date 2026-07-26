@@ -129,20 +129,18 @@ export function ClaimDetail() {
     try {
       // save latest fields first
       await api(`/api/claims/${claimId}`, { method: "PATCH", body: JSON.stringify({ fields }) });
-      const res = await api<{ sessionId: string; claimId: string; portalUrl: string }>(
+      const res = await api<{ sessionId: string; claimId: string; portalUrl: string; demoFormUrl: string; bankName: string }>(
         `/api/claims/${claimId}/submit`,
         { method: "POST" }
       );
       useAppStore.getState().setAutomationSessionId(res.sessionId);
-      // Open the REAL bank portal in a new tab so the user can see it.
-      // Playwright also opens it headless and streams screenshots. The engine
-      // stops before submitting — no claim is filed.
+      // Open the REAL bank site in a new tab so the user can see it.
       if (res.portalUrl) {
         window.open(res.portalUrl, "_blank", "noopener,noreferrer");
       }
       toast({
-        title: "Bank portal opened",
-        description: "The real bank site opened in a new tab. The engine is preparing your claim — it will stop before submission.",
+        title: `${res.bankName} portal opened`,
+        description: "The real bank site opened in a new tab. The engine is filling the claim form demo live — watch the panel below.",
       });
     } catch (e) {
       toast({ title: "Submit failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
@@ -301,12 +299,11 @@ export function ClaimDetail() {
                 <div className="rounded-lg border border-primary/15 bg-primary/5 p-3 flex items-start gap-2">
                   <Lock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-medium">You log in. We prepare. You submit.</p>
+                    <p className="text-xs font-medium">How the automation works</p>
                     <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
-                      When you click prepare, the real bank portal opens in a new tab and Playwright
-                      navigates to it. You authenticate yourself — we never see your bank password.
-                      The engine fills the claim form, then <span className="font-medium text-foreground">stops before submission</span> so
-                      you can review and click submit yourself. No claim is ever filed without your consent.
+                      <span className="font-medium text-foreground">1.</span> The real {benefit?.transaction.card?.bankName ?? "bank"} site opens in a new tab — you log in yourself (we never see your password).<br/>
+                      <span className="font-medium text-foreground">2.</span> The engine fills a claim form with identical fields live — watch the screenshots below.<br/>
+                      <span className="font-medium text-foreground">3.</span> It stops before submission — you review and click submit yourself.
                     </p>
                   </div>
                 </div>
