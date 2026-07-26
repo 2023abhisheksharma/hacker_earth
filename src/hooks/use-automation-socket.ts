@@ -30,12 +30,17 @@ export function useAutomationSocket() {
     });
     socket.on("automation:step", (ev: AutomationStep) => {
       upsertStep({ ...ev, timestamp: ev.timestamp ?? new Date().toISOString() });
-      // When the submit step finishes (done or failed), update the claim status.
-      const isSubmitStep = /submit/i.test(ev.action ?? "");
-      if (isSubmitStep && !markedSubmitted) {
+      // When the final step completes, update the claim status.
+      const isFinalStep = ev.step >= 8;
+      if (isFinalStep && !markedSubmitted) {
         markedSubmitted = true;
-        const status = ev.status === "done" ? "submitted" : ev.status === "failed" ? "failed" : null;
-        if (status && activeClaimId) {
+        const isStopped = /stopped|before submission/i.test(ev.action ?? "");
+        const status = ev.status === "failed"
+          ? "failed"
+          : isStopped
+            ? "under_review" // prepared but not submitted — awaiting card member's review
+            : "submitted";
+        if (activeClaimId) {
           api(`/api/claims/${activeClaimId}`, {
             method: "PATCH",
             body: JSON.stringify({ status }),

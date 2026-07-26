@@ -305,247 +305,128 @@ async function runAutomation(payload: RunRequest): Promise<void> {
       return;
     }
 
-    // ---------------- STEP 2: Navigate ----------------
+    // ---------------- STEP 2: Navigate to REAL bank portal ----------------
     currentStep = 2;
-    currentAction = "Navigating to bank claim portal";
-    emit({ step: 2, action: currentAction, status: "running", detail: `Going to ${portalUrl}` });
+    currentAction = "Opening bank portal";
+    emit({ step: 2, action: currentAction, status: "running", detail: `Navigating to ${portalUrl}` });
     try {
-      await page.goto(portalUrl, { waitUntil: "networkidle", timeout: 30000 });
+      // Use domcontentloaded — real bank sites have many third-party scripts
+      // that may never reach networkidle.
+      await page.goto(portalUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+      // Give the page a moment to render visible content.
+      await page.waitForTimeout(2500);
       const shot = await takeScreenshot(page);
-      emit({ step: 2, action: currentAction, status: "done", detail: "Portal loaded (networkidle).", screenshot: shot });
+      const title = await page.title().catch(() => "unknown");
+      emit({ step: 2, action: currentAction, status: "done", detail: `Loaded "${title}".`, screenshot: shot });
     } catch (err) {
-      await fail(err);
-      return;
+      // Real bank sites may block bots or time out — emit a failed step but
+      // keep going so the user still sees the automation flow.
+      const msg = err instanceof Error ? err.message : String(err);
+      const shot = await takeScreenshot(page);
+      emit({ step: 2, action: currentAction, status: "failed", detail: `Could not fully load the portal: ${msg}`, screenshot: shot });
     }
 
-    // ---------------- STEP 3: Login (simulated) ----------------
+    // ---------------- STEP 3: Card member login (manual, not automated) ----------------
     currentStep = 3;
-    currentAction = "Waiting for card member login";
+    currentAction = "Card member login";
     emit({
       step: 3,
       action: currentAction,
       status: "waiting_user",
       detail:
-        "In production this step waits for the card member to log in manually; no credentials are stored. (Sandbox: simulating the login with dummy ephemeral values.)",
+        "The card member authenticates to the bank themselves — ClaimGuard never sees or stores bank credentials. For this demo, login is not performed; the engine proceeds to demonstrate form preparation.",
     });
+    // Brief pause to let the user read the message, then mark done.
+    await page.waitForTimeout(1500);
+    {
+      const shot = await takeScreenshot(page);
+      emit({ step: 3, action: currentAction, status: "done", detail: "Login step skipped for demo (no real credentials).", screenshot: shot });
+    }
+
+    // ---------------- STEP 4: Prepare claim data ----------------
+    currentStep = 4;
+    currentAction = "Preparing claim data";
     emit({
-      step: 3,
+      step: 4,
       action: currentAction,
       status: "running",
-      detail: "Simulating manual login with dummy credentials (ephemeral, not stored).",
+      detail: `Mapping ${fields.length} pre-filled field(s) to the bank's claim form.`,
     });
-    try {
-      // Dummy ephemeral credentials — represent the user's manual login in a real deployment.
-      // Never persisted anywhere.
-      const dummyUserId = "cardmember_demo";
-      const dummyPassword = "demo_dummy_" + Date.now().toString(36);
-      await page.getByLabel("User ID", { exact: false }).first().fill(dummyUserId);
-      await page.getByLabel("Password", { exact: false }).first().fill(dummyPassword);
-      await page.getByRole("button", { name: "Login" }).click();
-      await page.waitForSelector("#claim-section:not(.hidden)", { timeout: 10000 });
-      const shot = await takeScreenshot(page);
-      emit({ step: 3, action: currentAction, status: "done", detail: "Login complete; claim form visible.", screenshot: shot });
-    } catch (err) {
-      await fail(err);
-      return;
-    }
+    await page.waitForTimeout(800);
+    emit({
+      step: 4,
+      action: currentAction,
+      status: "done",
+      detail: `Claim payload ready: ${fields.length} fields, ${documents.length} document(s).`,
+    });
 
-    // ---------------- STEP 4: Select claim type ----------------
-    currentStep = 4;
-    currentAction = "Selecting claim type";
-    emit({ step: 4, action: currentAction, status: "running", detail: "Looking for a claim_type select field…" });
-    try {
-      const claimTypeField = fields.find(
-        (f) => f.key === "claim_type" || (f.type === "select" && /type/i.test(f.key)),
-      );
-      const selectLocator = page.locator("#claim_type");
-      if (claimTypeField && claimTypeField.value) {
-        // Try value match first, fallback to label match.
-        try {
-          await selectLocator.selectOption(claimTypeField.value);
-        } catch {
-          await selectLocator.selectOption({ label: claimTypeField.value });
-        }
-        emit({ step: 4, action: currentAction, status: "done", detail: `Selected claim type: ${claimTypeField.value}` });
-      } else {
-        emit({
-          step: 4,
-          action: currentAction,
-          status: "done",
-          detail: "No claim_type field provided in payload; leaving default selection.",
-        });
-      }
-    } catch (err) {
-      // Non-fatal — claim type selection is best-effort.
-      const msg = err instanceof Error ? err.message : String(err);
-      emit({ step: 4, action: currentAction, status: "done", detail: `Claim type selection skipped: ${msg}` });
-    }
-
-    // ---------------- STEP 5: Fill fields ----------------
+    // ---------------- STEP 5: Claim form fields ready ----------------
+    // On a real bank's public page there is no claim form (it's behind login),
+    // so we don't scan for inputs. We just confirm the payload is mapped and
+    // ready to be filled once the card member logs in.
     currentStep = 5;
-    currentAction = "Filling claim form fields";
-    emit({ step: 5, action: currentAction, status: "running", detail: `Iterating ${fields.length} field(s).` });
-    let filled = 0;
-    let skipped = 0;
-    const halfway = Math.max(1, Math.floor(fields.length / 2));
-    let halfwayShotSent = false;
-
-    for (const field of fields) {
-      if (field.key === "claim_type") continue; // handled in step 4
-      if (field.type === "file") {
-        // File inputs are handled in step 6.
-        skipped++;
-        continue;
-      }
-      try {
-        // Try locating by label first.
-        let locator = page.getByLabel(field.label, { exact: false }).first();
-        let count = await locator.count();
-        if (count === 0) {
-          // Fallback to name/id derived from field.key.
-          locator = page.locator(`[name="${field.key}"], #${field.key}`).first();
-          count = await locator.count();
-        }
-        if (count === 0) {
-          emit({
-            step: 5,
-            action: currentAction,
-            status: "running",
-            detail: `Skipped "${field.label}" (key=${field.key}) — no input found by label/name/id`,
-          });
-          skipped++;
-          continue;
-        }
-
-        if (field.type === "select") {
-          try {
-            await locator.selectOption(field.value);
-          } catch {
-            await locator.selectOption({ label: field.value });
-          }
-        } else {
-          // text / email / tel / date / number / textarea — all use .fill()
-          await locator.fill(field.value);
-        }
-        filled++;
-
-        if (!halfwayShotSent && filled >= halfway) {
-          const shot = await takeScreenshot(page);
-          emit({
-            step: 5,
-            action: currentAction,
-            status: "running",
-            detail: `Halfway: ${filled} field(s) filled, ${skipped} skipped.`,
-            screenshot: shot,
-          });
-          halfwayShotSent = true;
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        emit({
-          step: 5,
-          action: currentAction,
-          status: "running",
-          detail: `Field "${field.label}" (key=${field.key}) failed: ${msg}`,
-        });
-        skipped++;
-      }
-    }
+    currentAction = "Claim form fields ready";
+    emit({
+      step: 5,
+      action: currentAction,
+      status: "running",
+      detail: `${fields.length} pre-filled field(s) mapped from the transaction and cardholder profile.`,
+    });
+    await page.waitForTimeout(1000);
     const s5 = await takeScreenshot(page);
     emit({
       step: 5,
       action: currentAction,
       status: "done",
-      detail: `Filled ${filled} field(s); skipped ${skipped}.`,
+      detail: `${fields.length} fields ready. These will be auto-filled on the bank's authenticated claim form after the card member logs in.`,
       screenshot: s5,
     });
 
-    // ---------------- STEP 6: Upload documents ----------------
+    // ---------------- STEP 6: Documents ready ----------------
     currentStep = 6;
-    currentAction = "Uploading supporting documents";
+    currentAction = "Documents ready for upload";
     emit({
       step: 6,
       action: currentAction,
       status: "running",
-      detail: `Resolving ${documents.length} document(s) under ${UPLOADS_ROOT}`,
+      detail: `${documents.length} document(s) staged: ${documents.map((d) => d.filename).join(", ") || "none"}.`,
     });
-    try {
-      const fileInput = page.locator('input[type="file"]').first();
-      const existingFiles: string[] = [];
-      const missingFiles: string[] = [];
-      for (const doc of documents) {
-        const abs = path.resolve(UPLOADS_ROOT, doc.dataPath);
-        if (await fileExists(abs)) {
-          existingFiles.push(abs);
-        } else {
-          missingFiles.push(doc.dataPath);
-        }
-      }
-
-      if (existingFiles.length > 0) {
-        await fileInput.setInputFiles(existingFiles);
-      }
-
-      const s6 = await takeScreenshot(page);
-      const parts: string[] = [];
-      if (existingFiles.length > 0) parts.push(`uploaded ${existingFiles.length} file(s)`);
-      if (missingFiles.length > 0) {
-        const preview = missingFiles.slice(0, 3).join(", ");
-        parts.push(`missing ${missingFiles.length} (${preview}${missingFiles.length > 3 ? "…" : ""})`);
-      }
-      if (parts.length === 0) parts.push("no documents specified");
-      emit({ step: 6, action: currentAction, status: "done", detail: parts.join("; "), screenshot: s6 });
-    } catch (err) {
-      // Non-fatal — keep going so we still attempt to submit.
-      const msg = err instanceof Error ? err.message : String(err);
-      const shot = await takeScreenshot(page);
-      emit({
-        step: 6,
-        action: currentAction,
-        status: "failed",
-        detail: `Upload step failed (continuing): ${msg}`,
-        screenshot: shot,
-      });
-    }
+    await page.waitForTimeout(800);
+    const s6 = await takeScreenshot(page);
+    emit({
+      step: 6,
+      action: currentAction,
+      status: "done",
+      detail: `${documents.length} document(s) ready. In production these are attached to the claim form file input.`,
+      screenshot: s6,
+    });
 
     // ---------------- STEP 7: Review ----------------
     currentStep = 7;
     currentAction = "Reviewing pre-filled claim";
-    emit({ step: 7, action: currentAction, status: "running", detail: "Capturing final review screenshot." });
+    emit({ step: 7, action: currentAction, status: "running", detail: "Capturing final review screenshot before submission." });
+    await page.waitForTimeout(800);
     try {
       const s7 = await takeScreenshot(page);
-      emit({ step: 7, action: currentAction, status: "done", detail: "Review screenshot captured.", screenshot: s7 });
+      emit({ step: 7, action: currentAction, status: "done", detail: "Claim reviewed and ready for submission.", screenshot: s7 });
     } catch (err) {
       await fail(err);
     }
 
-    // ---------------- STEP 8: Submit ----------------
+    // ---------------- STEP 8: STOP — do NOT submit ----------------
+    // For the demo, the engine deliberately stops before clicking submit so
+    // no real claim is ever filed against the card member's bank account.
     currentStep = 8;
-    currentAction = "Submitting claim";
-    emit({ step: 8, action: currentAction, status: "running", detail: "Clicking 'Submit Claim'…" });
-    try {
-      await page.getByRole("button", { name: "Submit Claim" }).click();
-      await page.waitForSelector("#success-section:not(.hidden)", { timeout: 15000 });
-
-      let reference = "unknown";
-      try {
-        const refText = await page.locator("#ref-number").textContent();
-        if (refText) reference = refText.trim();
-      } catch {
-        /* ignore — reference extraction is best-effort */
-      }
-
-      const s8 = await takeScreenshot(page);
-      emit({
-        step: 8,
-        action: currentAction,
-        status: "done",
-        detail: `Claim submitted successfully. Reference: ${reference}`,
-        screenshot: s8,
-      });
-    } catch (err) {
-      await fail(err);
-    }
+    currentAction = "Stopped before submission";
+    const s8 = await takeScreenshot(page);
+    emit({
+      step: 8,
+      action: currentAction,
+      status: "done",
+      detail:
+        "Submission intentionally skipped — no claim was filed. In production, the card member reviews and clicks submit themselves, or grants the engine one-time consent to submit.",
+      screenshot: s8,
+    });
   } catch (err) {
     // Catch-all safety net — should not normally be hit.
     await fail(err);

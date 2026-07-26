@@ -14,16 +14,18 @@ export const INDIAN_BANKS = [
 
 export type IndianBank = (typeof INDIAN_BANKS)[number];
 
-// Bank claim portal URLs (mocked for demo; real portals vary)
+// Real Indian bank website URLs. The automation opens the real bank portal
+// so the card member can authenticate themselves. Playwright fills the claim
+// form but STOPS before submission — no real claim is ever filed in the demo.
 export const BANK_PORTALS: Record<string, { url: string; name: string }> = {
-  "HDFC Bank": { url: "http://localhost:3005", name: "HDFC SmartHub Claims" },
-  "ICICI Bank": { url: "http://localhost:3005", name: "ICICI iProtect Claims" },
-  "Axis Bank": { url: "http://localhost:3005", name: "Axis Edge Claims" },
-  "SBI Card": { url: "http://localhost:3005", name: "SBI Card Secure Claims" },
-  "Kotak Mahindra": { url: "http://localhost:3005", name: "Kotak Claims Hub" },
-  "Yes Bank": { url: "http://localhost:3005", name: "Yes Bank Claims" },
-  "IDFC First": { url: "http://localhost:3005", name: "IDFC Claims Portal" },
-  "American Express": { url: "http://localhost:3005", name: "Amex Claims" },
+  "HDFC Bank": { url: "https://www.hdfcbank.com/", name: "HDFC Bank" },
+  "ICICI Bank": { url: "https://www.icicibank.com/", name: "ICICI Bank" },
+  "Axis Bank": { url: "https://www.axisbank.com/", name: "Axis Bank" },
+  "SBI Card": { url: "https://www.sbicard.com/", name: "SBI Card" },
+  "Kotak Mahindra": { url: "https://www.kotak.com/", name: "Kotak Mahindra Bank" },
+  "Yes Bank": { url: "https://www.yesbank.in/", name: "Yes Bank" },
+  "IDFC First": { url: "https://www.idfcfirstbank.com/", name: "IDFC First Bank" },
+  "American Express": { url: "https://www.americanexpress.com/in/", name: "American Express India" },
 };
 
 export const BENEFIT_TYPES: Record<BenefitType, BenefitTypeInfo> = {

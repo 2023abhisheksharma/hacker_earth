@@ -188,3 +188,36 @@ Stage Summary:
 - Verified golden path: login → onboarding → load demo cards → continue → load demo data → 16 benefits → open benefit → pre-filled form scrolls → upload PDF → auto-submit → 6 screenshots + 8 steps → claim submitted
 - Lint: clean (0 errors)
 - No console/runtime errors
+
+---
+Task ID: 8
+Agent: orchestrator
+Task: Switch from mock portal to real Indian bank websites; open real bank in new tab; stop before submission
+
+Work Log:
+- Updated BANK_PORTALS in constants.ts to use real Indian bank website URLs (HDFC, ICICI, Axis, SBI Card, Kotak, Yes Bank, IDFC First, Amex)
+- Rewrote Playwright service automation flow (mini-services/playwright-service/index.ts):
+  - Step 2: Navigate to REAL bank URL with domcontentloaded (not networkidle — real sites have many third-party scripts)
+  - Step 3: "Card member login" — emits waiting_user, explains login is manual and skipped for demo (no dummy credentials)
+  - Step 4: "Preparing claim data" — confirms payload mapped
+  - Step 5: "Claim form fields ready" — confirms fields ready (doesn't scan real bank homepage — no claim form exists without login)
+  - Step 6: "Documents ready for upload"
+  - Step 7: "Reviewing pre-filled claim"
+  - Step 8: "Stopped before submission" — does NOT click submit, emits "Submission intentionally skipped — no claim was filed"
+- Updated claim-detail.tsx: submitClaim() now calls window.open(realBankUrl) to open the real bank in a new tab; button text changed to "Open bank & prepare claim"; privacy note updated to "You log in. We prepare. You submit."
+- Updated automation-panel.tsx: header shows "Claim prepared — stopped before submission" with amber icon when stopped
+- Updated use-automation-socket.ts: marks claim as "under_review" (not "submitted") when step 8 action contains "stopped"
+- Updated claim-history.tsx: "under_review" shows as "Prepared — review & submit" badge
+- Properly restarted Playwright service (killed old PID, started fresh)
+
+Stage Summary:
+- Verified via Agent Browser through gateway (port 81):
+  1. Click "Open bank & prepare claim" → real bank website opens in new browser tab (verified: Kotak https://www.kotak.bank.in/en/home.html loads)
+  2. Playwright navigates to the real bank URL headless, streams 6 screenshots
+  3. All 8 steps complete: launch → open real bank → login (skipped) → prepare data → fields ready → documents ready → review → STOPPED before submission
+  4. Automation panel shows "Claim prepared — stopped before submission"
+  5. Claims tab shows status "Prepared — review & submit"
+  6. No claim was filed — submission deliberately skipped
+- Real bank sites tested: ICICI (loads), Axis (loads), Kotak (loads). HDFC blocks sandbox IP (CloudFront) — handled gracefully with error screenshot.
+- Mock portal (port 3005) no longer used; can be left dormant.
+- Lint: clean

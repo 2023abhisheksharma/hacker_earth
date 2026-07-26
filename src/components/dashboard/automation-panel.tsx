@@ -37,19 +37,26 @@ export function AutomationPanel() {
   const lastStep = steps[steps.length - 1];
   const isRunning = steps.some((s) => s.status === "running" || s.status === "waiting_user" || s.status === "pending");
   const failed = steps.some((s) => s.status === "failed");
+  const stopped = !isRunning && !failed && lastStep?.action?.toLowerCase().includes("stopped");
 
   return (
     <Card className="border-primary/20 overflow-hidden">
       <div className="bg-gradient-to-r from-primary/10 to-transparent px-4 py-3 border-b">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className={`h-8 w-8 rounded-lg grid place-items-center ${failed ? "bg-rose-500/10 text-rose-600" : isRunning ? "bg-primary/15 text-primary cba-pulse" : "bg-emerald-500/10 text-emerald-600"}`}>
+            <div className={`h-8 w-8 rounded-lg grid place-items-center ${failed ? "bg-rose-500/10 text-rose-600" : isRunning ? "bg-primary/15 text-primary cba-pulse" : stopped ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600"}`}>
               {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : failed ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
             </div>
             <div>
               <p className="font-semibold text-sm leading-tight">Automation engine</p>
               <p className="text-[11px] text-muted-foreground leading-tight">
-                {failed ? "Submission failed — see steps below" : isRunning ? "Playwright is filling your claim…" : "Claim submitted"}
+                {failed
+                  ? "Portal error — see steps below"
+                  : isRunning
+                    ? "Opening bank portal & preparing claim…"
+                    : stopped
+                      ? "Claim prepared — stopped before submission"
+                      : "Claim prepared"}
               </p>
             </div>
           </div>

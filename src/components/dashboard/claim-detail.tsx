@@ -134,9 +134,15 @@ export function ClaimDetail() {
         { method: "POST" }
       );
       useAppStore.getState().setAutomationSessionId(res.sessionId);
+      // Open the REAL bank portal in a new tab so the user can see it.
+      // Playwright also opens it headless and streams screenshots. The engine
+      // stops before submitting — no claim is filed.
+      if (res.portalUrl) {
+        window.open(res.portalUrl, "_blank", "noopener,noreferrer");
+      }
       toast({
-        title: "Automation started",
-        description: "Playwright is opening the bank portal and filling your claim.",
+        title: "Bank portal opened",
+        description: "The real bank site opened in a new tab. The engine is preparing your claim — it will stop before submission.",
       });
     } catch (e) {
       toast({ title: "Submit failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
@@ -147,7 +153,7 @@ export function ClaimDetail() {
 
   const info = benefit ? BENEFIT_TYPES[benefit.type as BenefitType] ?? BENEFIT_TYPES.purchase_protection : null;
   const accent = info ? ACCENT_CLASSES[info.accent] ?? ACCENT_CLASSES.emerald : ACCENT_CLASSES.emerald;
-  const canSubmit = claimStatus === "draft" || claimStatus === "failed";
+  const canSubmit = claimStatus === "draft" || claimStatus === "failed" || claimStatus === "under_review";
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && close()}>
@@ -295,11 +301,12 @@ export function ClaimDetail() {
                 <div className="rounded-lg border border-primary/15 bg-primary/5 p-3 flex items-start gap-2">
                   <Lock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-medium">You log in. We fill the rest.</p>
+                    <p className="text-xs font-medium">You log in. We prepare. You submit.</p>
                     <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
-                      When you submit, Playwright opens the bank portal in a secure browser. You
-                      authenticate yourself — we never see or store your bank password. After login,
-                      the engine fills the form, uploads your documents, and submits the claim.
+                      When you click prepare, the real bank portal opens in a new tab and Playwright
+                      navigates to it. You authenticate yourself — we never see your bank password.
+                      The engine fills the claim form, then <span className="font-medium text-foreground">stops before submission</span> so
+                      you can review and click submit yourself. No claim is ever filed without your consent.
                     </p>
                   </div>
                 </div>
@@ -319,7 +326,7 @@ export function ClaimDetail() {
             </Button>
             <Button size="sm" onClick={submitClaim} disabled={!canSubmit || submitting || loading} className="gap-1.5">
               {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-              {canSubmit ? "Auto-submit claim" : "Submitted"}
+              {claimStatus === "under_review" ? "Re-open bank portal" : canSubmit ? "Open bank & prepare claim" : "Prepared"}
             </Button>
           </div>
         </SheetFooter>

@@ -29,9 +29,9 @@ interface ClaimRow {
 
 const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
   draft: { label: "Draft", cls: "bg-slate-500/10 text-slate-700 dark:text-slate-300" },
-  submitting: { label: "Submitting", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-300" },
+  submitting: { label: "Preparing", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-300" },
   submitted: { label: "Submitted", cls: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300" },
-  under_review: { label: "Under review", cls: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300" },
+  under_review: { label: "Prepared — review & submit", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-300" },
   approved: { label: "Approved", cls: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" },
   rejected: { label: "Rejected", cls: "bg-rose-500/10 text-rose-700 dark:text-rose-300" },
   failed: { label: "Failed", cls: "bg-rose-500/10 text-rose-700 dark:text-rose-300" },
