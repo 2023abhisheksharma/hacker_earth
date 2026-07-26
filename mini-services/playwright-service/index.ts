@@ -298,7 +298,32 @@ async function runAutomation(payload: RunRequest): Promise<void> {
       detail: "Starting Chromium (headless=true, sandbox). In production this would be headed so the card member can log in manually.",
     });
     try {
-      browser = await chromium.launch({ headless: true });
+      try {
+        browser = await chromium.launch({
+          headless: true,
+          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+        });
+      } catch (launchErr) {
+        console.warn("[playwright] default launch failed, checking fallback binary paths:", launchErr);
+        const fallbackPaths = [
+          "/usr/bin/chromium",
+          "/usr/bin/chromium-browser",
+          "/usr/bin/google-chrome",
+        ];
+        let found = false;
+        for (const p of fallbackPaths) {
+          if (fs.existsSync(p)) {
+            browser = await chromium.launch({
+              executablePath: p,
+              headless: true,
+              args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+            });
+            found = true;
+            break;
+          }
+        }
+        if (!found) throw launchErr;
+      }
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
       page = await context.newPage();
       emit({ step: 1, action: currentAction, status: "done", detail: "Chromium launched (headless, 1280x900)." });

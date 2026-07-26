@@ -6,6 +6,7 @@ console.log("🚀 Starting ClaimGuard Services for Production...");
 // Force HOSTNAME to 0.0.0.0 so Render's load balancer can connect
 process.env.HOSTNAME = "0.0.0.0";
 process.env.NODE_ENV = "production";
+process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || "0";
 
 // Start mini-services in background
 console.log("👉 Starting Mock Claim Portal (port 3005)...");
