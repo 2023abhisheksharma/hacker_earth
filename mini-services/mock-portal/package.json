@@ -1,0 +1,10 @@
+{
+  "name": "mock-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mock Indian bank claim portal — target for Playwright automation",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  }
+}

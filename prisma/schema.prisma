@@ -1,0 +1,131 @@
+// Card Benefit Activation Engine - Prisma Schema
+// Indian bank card protections: purchase, return, travel-delay, lost baggage, extended warranty
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions      Session[]
+  cards         Card[]
+  transactions  Transaction[]
+  benefits      Benefit[]
+  claims        Claim[]
+}
+
+// Sessions are opaque tokens - NO bank credentials are ever stored.
+// Users authenticate to our app with email only; bank portal login
+// happens live inside the Playwright browser session and is discarded.
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Card {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankName    String   // HDFC, ICICI, Axis, SBI, Kotak
+  cardName    String   // Infinia, Amazon Pay, Magnus, Elite
+  cardType    String   // credit | debit
+  last4       String
+  network     String   // Visa | Mastercard | RuPay | Amex
+  benefits    CardBenefit[]
+  transactions Transaction[]
+  createdAt   DateTime @default(now())
+}
+
+model CardBenefit {
+  id            String   @id @default(cuid())
+  cardId        String
+  card          Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  type          String   // purchase_protection | return_protection | travel_delay | lost_baggage | extended_warranty | air_accident
+  title         String
+  description   String
+  coverageLimit Int      // INR
+  windowDays    Int      // claim filing window in days
+  conditions    String   // JSON: mcc list, min amount, channels, etc.
+  benefits      Benefit[]
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId      String?
+  card        Card?    @relation(fields: [cardId], references: [id])
+  amount      Float
+  currency    String   @default("INR")
+  merchant    String
+  mcc         String?
+  category    String   // shopping | travel | dining | electronics | grocery | fuel | other
+  date        DateTime
+  source      String   // sms | email | manual
+  rawText     String?
+  cardLast4   String?
+  benefits    Benefit[]
+  createdAt   DateTime @default(now())
+}
+
+model Benefit {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionId   String
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  type            String   // purchase_protection | return_protection | travel_delay | lost_baggage | extended_warranty
+  cardBenefitId   String?
+  cardBenefit     CardBenefit? @relation(fields: [cardBenefitId], references: [id])
+  status          String   @default("detected") // detected | viewed | claim_started | submitted | approved | rejected | expired
+  coverageAmount  Float    // estimated reimbursable amount
+  reason          String   // human-readable why this qualifies
+  confidence      Float    @default(0.8) // 0-1 detection confidence
+  detectedAt      DateTime @default(now())
+  expiresAt       DateTime? // claim window deadline
+  claims          Claim[]
+}
+
+model Claim {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benefitId     String
+  benefit       Benefit  @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+  status        String   @default("draft") // draft | submitting | submitted | under_review | approved | rejected | failed
+  formData      String   // JSON: pre-filled fields
+  portalUrl     String?
+  portalBank    String?  // target bank portal
+  documents     Document[]
+  submissionLog String?  // JSON array of Playwright steps
+  screenshotPath String?
+  submittedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  claimId   String
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  filename  String
+  fileType  String   // image | pdf | text
+  mimeType  String
+  dataPath  String   // relative path under /home/z/my-project/uploads
+  fileSize  Int
+  createdAt DateTime @default(now())
+}

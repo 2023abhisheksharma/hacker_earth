@@ -1,0 +1,15 @@
+{
+  "name": "playwright-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright automation service for filing card benefit claims on the mock portal",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.3"
+  }
+}
