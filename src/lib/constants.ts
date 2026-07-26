@@ -14,18 +14,19 @@ export const INDIAN_BANKS = [
 
 export type IndianBank = (typeof INDIAN_BANKS)[number];
 
-// Real Indian bank website URLs. The automation opens the real bank portal
-// so the card member can authenticate themselves. Playwright fills the claim
-// form but STOPS before submission — no real claim is ever filed in the demo.
+// Real Indian bank claim/protection page URLs. These point to the bank's
+// credit-card protection or customer-care section — the closest public page
+// to where insurance/protection claims are actually filed (the real claim
+// form is behind authentication, which the card member completes themselves).
 export const BANK_PORTALS: Record<string, { url: string; name: string }> = {
-  "HDFC Bank": { url: "https://www.hdfcbank.com/", name: "HDFC Bank" },
-  "ICICI Bank": { url: "https://www.icicibank.com/", name: "ICICI Bank" },
-  "Axis Bank": { url: "https://www.axisbank.com/", name: "Axis Bank" },
+  "HDFC Bank": { url: "https://www.hdfcbank.com/personal/pay/cards/credit-cards", name: "HDFC Credit Cards" },
+  "ICICI Bank": { url: "https://www.icicibank.com/customer-care", name: "ICICI Customer Care" },
+  "Axis Bank": { url: "https://www.axisbank.com/credit-cards", name: "Axis Credit Cards" },
   "SBI Card": { url: "https://www.sbicard.com/", name: "SBI Card" },
-  "Kotak Mahindra": { url: "https://www.kotak.com/", name: "Kotak Mahindra Bank" },
+  "Kotak Mahindra": { url: "https://www.kotak.com/en/personal-banking/cards/credit-cards.html", name: "Kotak Credit Cards" },
   "Yes Bank": { url: "https://www.yesbank.in/", name: "Yes Bank" },
-  "IDFC First": { url: "https://www.idfcfirstbank.com/", name: "IDFC First Bank" },
-  "American Express": { url: "https://www.americanexpress.com/in/", name: "American Express India" },
+  "IDFC First": { url: "https://www.idfcfirstbank.com/credit-card", name: "IDFC Credit Cards" },
+  "American Express": { url: "https://www.americanexpress.com/in/credit-cards/", name: "Amex Credit Cards" },
 };
 
 export const BENEFIT_TYPES: Record<BenefitType, BenefitTypeInfo> = {
