@@ -3,8 +3,8 @@ const path = require("path");
 
 console.log("🚀 Starting ClaimGuard Services for Production...");
 
-// Ensure HOSTNAME is 0.0.0.0 so Render load balancers can reach Next.js
-process.env.HOSTNAME = process.env.HOSTNAME || "0.0.0.0";
+// Force HOSTNAME to 0.0.0.0 so Render's load balancer can connect
+process.env.HOSTNAME = "0.0.0.0";
 process.env.NODE_ENV = "production";
 
 // Start mini-services in background
