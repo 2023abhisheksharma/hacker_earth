@@ -382,8 +382,7 @@ function htmlPage(params: { bank: string; bankUrl?: string }): string {
         statusPill.textContent = 'Connecting…';
         statusPill.classList.add('live');
       }
-      var targetHost = window.location.protocol + '//' + window.location.hostname + ':3004';
-      var socket = io(targetHost, { path: '/', transports: ['websocket','polling'] });
+      var socket = io({ path: '/socket.io', transports: ['polling', 'websocket'] });
       socket.on('connect', function() {
         socket.emit('join', sessionId);
         if (statusPill) statusPill.textContent = 'Waiting for engine…';

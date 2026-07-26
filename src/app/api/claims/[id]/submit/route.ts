@@ -42,7 +42,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     //    externally; localhost:3005 is internal to the sandbox.
     const query = `bank=${encodeURIComponent(bankName)}&bankUrl=${encodeURIComponent(portalUrl)}`;
     const playwrightFormUrl = `http://localhost:3005/?${query}`;
-    const demoFormUrl = `http://localhost:3005/?${query}`;
+    const demoFormUrl = `/demo-form?${query}`;
 
     // mark submitting
     await db.claim.update({
