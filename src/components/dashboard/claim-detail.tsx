@@ -16,8 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Wand2, Send, Save, X, ShieldCheck, ExternalLink, Lock } from "lucide-react";
+import { Loader2, Wand2, Send, Save, X, ShieldCheck, ExternalLink, Lock, Upload } from "lucide-react";
 import { api, formatINR, formatDate } from "@/lib/client";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
@@ -197,7 +196,7 @@ export function ClaimDetail() {
           )}
         </SheetHeader>
 
-        <ScrollArea className="flex-1 cba-scroll">
+        <div className="flex-1 overflow-y-auto cba-scroll min-h-0">
           <div className="p-5 space-y-5">
             {loading && (
               <div className="grid place-items-center py-12 text-muted-foreground">
@@ -274,8 +273,18 @@ export function ClaimDetail() {
 
                 <Separator />
 
-                {/* Documents */}
-                {claimId && <DocumentUpload key={claimId} claimId={claimId} />}
+                {/* Documents — prominent upload section */}
+                {claimId && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold flex items-center gap-1.5">
+                        <Upload className="h-4 w-4 text-primary" /> Supporting documents
+                      </p>
+                      <Badge variant="outline" className="text-[10px]">image · pdf · text</Badge>
+                    </div>
+                    <DocumentUpload key={claimId} claimId={claimId} />
+                  </div>
+                )}
 
                 <Separator />
 
@@ -297,7 +306,7 @@ export function ClaimDetail() {
               </>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <SheetFooter className="border-t p-3 shrink-0">
           <div className="flex items-center gap-2 w-full">

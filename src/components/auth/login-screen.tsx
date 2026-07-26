@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { api } from "@/lib/client";
+import { api, setToken } from "@/lib/client";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,12 +22,13 @@ export function LoginScreen() {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = await api<{ user: unknown }>("/api/auth/login", {
+      const data = await api<{ user: unknown; token: string }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, name, phone }),
       });
+      setToken(data.token);
       setUser(data.user as never);
-      toast({ title: "Welcome to ClaimGuard", description: "Your card benefits are being scanned." });
+      toast({ title: "Welcome to ClaimGuard", description: "Let's add your cards to get started." });
     } catch (err) {
       toast({
         title: "Login failed",

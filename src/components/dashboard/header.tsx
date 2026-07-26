@@ -4,7 +4,7 @@ import { ShieldCheck, LogOut, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAppStore } from "@/store/app-store";
-import { api } from "@/lib/client";
+import { api, clearToken } from "@/lib/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
@@ -16,14 +16,18 @@ export function Header() {
   async function seedDemo() {
     setSeeding(true);
     try {
-      const res = await api<{ cards: number; transactions: number; benefits: number }>("/api/seed", { method: "POST" });
+      // Load demo transactions (cards come from onboarding)
+      const res = await api<{ txnsCreated: number; benefitsDetected: number }>(
+        "/api/seed/transactions",
+        { method: "POST" }
+      );
       toast({
-        title: "Demo data ready",
-        description: `${res.cards} cards · ${res.transactions} transactions · ${res.benefits} benefits detected.`,
+        title: res.txnsCreated > 0 ? "Demo transactions loaded" : "Already up to date",
+        description: `${res.txnsCreated} transaction(s) · ${res.benefitsDetected} benefit(s) detected.`,
       });
       bumpRefresh();
     } catch (e) {
-      toast({ title: "Seed failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+      toast({ title: "Load failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
     } finally {
       setSeeding(false);
     }
@@ -35,6 +39,7 @@ export function Header() {
     } catch {
       /* ignore */
     }
+    clearToken();
     setUser(null);
   }
 

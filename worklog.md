@@ -158,3 +158,33 @@ Stage Summary:
 - Mobile responsive: tested at 390x844
 - No bank credentials stored: user logs in to bank portal inside Playwright browser session
 - Services: Next.js (3000), Playwright (3004), Mock portal (3005), Gateway (81)
+
+---
+Task ID: 7
+Agent: orchestrator
+Task: Fix user-reported issues: TypeError, preview auth, card onboarding flow, sheet scrolling, document upload
+
+Work Log:
+- Fixed TypeError in transaction-list.tsx: added benefits include to /api/transactions + defensive (t.benefits?.length ?? 0)
+- Fixed iframe/preview auth: added Bearer token header fallback to getCurrentUser (reads Authorization header via next/headers, then cookie). Login returns token in body. Frontend stores token in localStorage and sends as Authorization header on every request. This fixes the "refresh doesn't show data in preview but works in new tab" issue (sameSite=lax cookies aren't sent in cross-site iframes).
+- Split seed.ts into seedDemoCards() + seedDemoTransactions() + addCard()
+- Added API routes: POST /api/cards/add (manual card add), POST /api/cards/demo (load 5 preset cards), POST /api/seed/transactions (load sample SMS)
+- Built OnboardingScreen component: 3-step stepper, manual card-add form (bank/cardName/last4/network), "Load demo cards" button, card list with benefit dots, "Continue to dashboard" button
+- Updated page.tsx: shows OnboardingScreen when user has no cards, dashboard when cards exist. Removed auto-seed on login.
+- Updated header "Load demo data" to call /api/seed/transactions (cards come from onboarding)
+- Fixed claim detail sheet: replaced Radix ScrollArea with plain overflow-y-auto div (ScrollArea didn't compute height correctly in flex layout). min-h-0 ensures proper flex scrolling.
+- Made document upload prominent: large upload area with icon, "Click to upload or drag & drop" CTA, supported file types listed (JPG, PNG, PDF, TXT), section heading with icon
+- Updated login screen to store token via setToken(), logout to clearToken()
+- Updated client.ts: api() and apiUpload() now send Authorization: Bearer header from localStorage
+
+Stage Summary:
+- All user-reported issues fixed and verified via Agent Browser through gateway (port 81):
+  1. TypeError: FIXED — transactions tab shows full table with benefit counts
+  2. Preview refresh: FIXED — Bearer token in localStorage persists across refreshes in iframe
+  3. Card onboarding flow: ADDED — login → onboarding (add cards manually or load demo) → dashboard
+  4. Auto-seed removed: user controls the flow
+  5. Sheet scrolling: FIXED — plain overflow-y-auto div, form + upload + automation all scrollable
+  6. Document upload: PROMINENT — large drag-drop area, supports image/PDF/text
+- Verified golden path: login → onboarding → load demo cards → continue → load demo data → 16 benefits → open benefit → pre-filled form scrolls → upload PDF → auto-submit → 6 screenshots + 8 steps → claim submitted
+- Lint: clean (0 errors)
+- No console/runtime errors

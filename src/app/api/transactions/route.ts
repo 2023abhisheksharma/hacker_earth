@@ -8,7 +8,7 @@ export async function GET() {
     if (!user) return { transactions: [] };
     const transactions = await db.transaction.findMany({
       where: { userId: user.id },
-      include: { card: true },
+      include: { card: true, benefits: { select: { id: true, type: true, coverageAmount: true } } },
       orderBy: { date: "desc" },
     });
     return { transactions };

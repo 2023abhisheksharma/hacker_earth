@@ -99,7 +99,7 @@ export function TransactionList() {
                 <td className="px-3 py-2.5 hidden sm:table-cell text-xs text-muted-foreground">{formatDate(t.date)}</td>
                 <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{formatINR(t.amount)}</td>
                 <td className="px-3 py-2.5 text-right">
-                  {t.benefits.length > 0 ? (
+                  {(t.benefits?.length ?? 0) > 0 ? (
                     <button
                       onClick={() => {
                         selectBenefit(t.benefits[0].id);

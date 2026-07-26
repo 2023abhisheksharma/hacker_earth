@@ -27,7 +27,10 @@ export async function POST(req: Request) {
     const token = await createSession(user.id);
     const res = NextResponse.json({
       ok: true,
-      data: { user: { id: user.id, email: user.email, name: user.name, phone: user.phone } },
+      data: {
+        user: { id: user.id, email: user.email, name: user.name, phone: user.phone },
+        token, // returned so the frontend can store it for iframe/preview use
+      },
     });
     setSessionCookie(res, token);
     return res;

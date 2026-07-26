@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ShieldCheck, Cpu, Workflow, Lock, Sparkles } from "lucide-react";
 import { api } from "@/lib/client";
 import { useAppStore } from "@/store/app-store";
@@ -12,11 +12,13 @@ import { BenefitList } from "@/components/dashboard/benefit-list";
 import { TransactionList } from "@/components/dashboard/transaction-list";
 import { ClaimHistory } from "@/components/dashboard/claim-history";
 import { ClaimDetail } from "@/components/dashboard/claim-detail";
+import { OnboardingScreen } from "@/components/dashboard/onboarding-screen";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function Home() {
-  const { user, authLoading, setUser, setAuthLoading, tab, setTab, refreshNonce, bumpRefresh } = useAppStore();
+  const { user, authLoading, setUser, setAuthLoading, tab, setTab, refreshNonce } = useAppStore();
+  const [hasCards, setHasCards] = useState<boolean | null>(null);
 
   // check existing session on mount
   useEffect(() => {
@@ -24,27 +26,19 @@ export default function Home() {
       .then((d) => setUser(d.user))
       .catch(() => setUser(null))
       .finally(() => setAuthLoading(false));
-  }, []);
+  }, [setUser, setAuthLoading]);
 
-  // when user logs in and has no benefits yet, auto-seed demo data once
+  // check if user has cards (drives onboarding vs dashboard)
   useEffect(() => {
     if (!user) return;
     let active = true;
-    (async () => {
-      try {
-        const ben = await api<{ benefits: unknown[] }>("/api/benefits");
-        if (active && ben.benefits.length === 0) {
-          await api("/api/seed", { method: "POST" });
-          bumpRefresh();
-        }
-      } catch {
-        /* ignore */
-      }
-    })();
+    api<{ cards: unknown[] }>("/api/cards")
+      .then((d) => active && setHasCards(d.cards.length > 0))
+      .catch(() => active && setHasCards(false));
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [user, refreshNonce]);
 
   if (authLoading) {
     return (
@@ -61,6 +55,30 @@ export default function Home() {
 
   if (!user) {
     return <LoginScreen />;
+  }
+
+  // Onboarding flow: show when user has no cards yet
+  if (hasCards === false) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <OnboardingScreen />
+        </main>
+        <footer className="mt-auto border-t bg-card/50 backdrop-blur">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+              <span>ClaimGuard — Card Benefit Activation Engine</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> No credentials stored</span>
+              <span className="flex items-center gap-1"><Workflow className="h-3 w-3" /> Playwright auto-fill</span>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
   }
 
   return (

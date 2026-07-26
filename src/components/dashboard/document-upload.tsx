@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Upload, FileText, Image as ImageIcon, FileType2, Loader2, Trash2, X } from "lucide-react";
+import { Upload, FileText, Image as ImageIcon, FileType2, Loader2, X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { apiUpload } from "@/lib/client";
@@ -59,12 +59,8 @@ export function DocumentUpload({ claimId }: { claimId: string }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium">Supporting documents</p>
-        <span className="text-[10px] text-muted-foreground">image · pdf · text</span>
-      </div>
       <div
-        className="rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition p-4 text-center cursor-pointer"
+        className="rounded-lg border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition p-5 text-center cursor-pointer group"
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
@@ -81,11 +77,14 @@ export function DocumentUpload({ claimId }: { claimId: string }) {
           onChange={(e) => onFiles(e.target.files)}
         />
         {loading ? (
-          <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
+          <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
         ) : (
           <>
-            <Upload className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-            <p className="text-xs text-muted-foreground">Drop files or click to upload</p>
+            <div className="h-10 w-10 rounded-full bg-primary/10 text-primary grid place-items-center mx-auto mb-2 group-hover:scale-110 transition">
+              <Upload className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-medium">Click to upload or drag &amp; drop</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Invoice, ID proof, statement · JPG, PNG, PDF, TXT</p>
           </>
         )}
       </div>
@@ -110,14 +109,9 @@ export function DocumentUpload({ claimId }: { claimId: string }) {
           })}
         </div>
       )}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-full text-[11px] gap-1"
-        onClick={() => inputRef.current?.click()}
-      >
-        <Trash2 className="h-3 w-3" /> Files are attached to this claim only — never to your bank account.
-      </Button>
+      <p className="text-[11px] text-muted-foreground text-center flex items-center justify-center gap-1">
+        <Lock className="h-3 w-3" /> Files are attached to this claim only — never to your bank account.
+      </p>
     </div>
   );
 }

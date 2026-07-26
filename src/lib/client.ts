@@ -1,6 +1,35 @@
 "use client";
 
 // Tiny fetch wrapper for the frontend. Returns parsed {ok, data} or throws.
+// The session token is stored in localStorage and sent as a Bearer header so
+// the app works inside cross-site iframes (preview panel) where sameSite=lax
+// cookies are not forwarded. The httpOnly cookie still works in normal tabs.
+
+const TOKEN_KEY = "cba_token";
+
+export function setToken(token: string) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    /* localStorage may be blocked */
+  }
+}
+
+export function getToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function clearToken() {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 export async function api<T = unknown>(
   path: string,
@@ -12,12 +41,15 @@ export async function api<T = unknown>(
     const qs = new URLSearchParams(query).toString();
     url += (path.includes("?") ? "&" : "?") + qs;
   }
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> ?? {}),
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(url, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
     ...init,
   });
   const json = await res.json().catch(() => ({ ok: false, error: "Invalid response" }));
@@ -28,9 +60,15 @@ export async function api<T = unknown>(
 }
 
 export function apiUpload(path: string, formData: FormData) {
-  return fetch(path, { method: "POST", credentials: "include", body: formData }).then((r) =>
-    r.json()
-  );
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: formData,
+  }).then((r) => r.json());
 }
 
 export function formatINR(n: number): string {
