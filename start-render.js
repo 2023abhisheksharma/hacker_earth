@@ -21,17 +21,21 @@ const playwrightSvc = spawn("npx", ["tsx", "mini-services/playwright-service/ind
   env: process.env,
 });
 
-// Start Next.js Standalone Server (listens on PORT set by Render, e.g. 10000)
-console.log(`👉 Starting Next.js Server on HOSTNAME=${process.env.HOSTNAME} PORT=${process.env.PORT || 3000}...`);
-const nextServer = spawn("node", [path.join(__dirname, ".next/standalone/server.js")], {
-  stdio: "inherit",
-  env: process.env,
-});
+let nextServer;
 
-nextServer.on("exit", (code) => {
-  console.log(`Next.js server exited with code ${code}`);
-  process.exit(code || 0);
-});
+// Give mini-services a 3-second head start to bind ports 3004 & 3005 before Next.js accepts traffic
+setTimeout(() => {
+  console.log(`👉 Starting Next.js Server on HOSTNAME=${process.env.HOSTNAME} PORT=${process.env.PORT || 3000}...`);
+  nextServer = spawn("node", [path.join(__dirname, ".next/standalone/server.js")], {
+    stdio: "inherit",
+    env: process.env,
+  });
+
+  nextServer.on("exit", (code) => {
+    console.log(`Next.js server exited with code ${code}`);
+    process.exit(code || 0);
+  });
+}, 3000);
 
 process.on("SIGTERM", () => {
   mockPortal.kill();

@@ -58,13 +58,29 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // Non-blocking: we kick it off and let socket.io stream progress.
     // Send the absolute localhost:3005 URL to Playwright (it navigates internally).
     const runBody = { portalUrl, demoFormUrl: playwrightFormUrl, bankName, claimId: claim.id, fields, documents, sessionId };
-    fetch("http://localhost:3004/api/run?XTransformPort=3004", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(runBody),
-    }).catch((e) => {
-      console.error("playwright kickoff failed", e);
-    });
+    
+    // Asynchronously kick off Playwright with automatic retries if port 3004 is warming up
+    (async () => {
+      const url = "http://localhost:3004/api/run?XTransformPort=3004";
+      for (let attempt = 1; attempt <= 6; attempt++) {
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(runBody),
+          });
+          if (res.ok) {
+            console.log(`[submit] Playwright automation kicked off successfully (attempt ${attempt})`);
+            return;
+          }
+          console.warn(`[submit] Playwright service returned HTTP ${res.status} (attempt ${attempt})`);
+        } catch (e) {
+          console.warn(`[submit] Playwright kickoff attempt ${attempt}/6 failed:`, (e as Error).message);
+        }
+        if (attempt < 6) await new Promise((r) => setTimeout(r, 1500));
+      }
+      console.error("[submit] All Playwright kickoff attempts failed!");
+    })();
 
     return { sessionId, claimId: claim.id, portalUrl, demoFormUrl, bankName };
   });
