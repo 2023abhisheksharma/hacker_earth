@@ -359,7 +359,22 @@ async function runAutomation(payload: RunRequest): Promise<void> {
     // ---------------- STEP 5: Fill form fields LIVE ----------------
     currentStep = 5;
     currentAction = "Filling claim form";
-    emit({ step: 5, action: currentAction, status: "running", detail: `Filling ${fields.length} field(s) by label…` });
+    // Give the user a moment to switch to the live form tab and watch.
+    // The demo form tab opens in a new browser tab; this pause lets the user
+    // focus it before the filling begins.
+    emit({
+      step: 5,
+      action: currentAction,
+      status: "waiting_user",
+      detail: "Opening the live form tab — switch to it to watch the form fill up. Starting in 3 seconds…",
+    });
+    await page.waitForTimeout(3000);
+    emit({
+      step: 5,
+      action: currentAction,
+      status: "running",
+      detail: `Filling ${fields.length} field(s) by label…`,
+    });
     let filled = 0;
     let skipped = 0;
     let halfwayShotSent = false;

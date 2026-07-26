@@ -320,3 +320,22 @@ Stage Summary:
   5. 7 screenshots also captured as evidence
 - The user can now WATCH the form fill up live in a visible browser tab, not just see screenshots
 - Lint: clean
+
+---
+Task ID: 12
+Agent: orchestrator
+Task: Fix "localhost refused to connect" + add 3-sec delay before filling
+
+Work Log:
+- Root cause of connection refused: demo form URL was http://localhost:3005/?... but port 3005 is internal to the sandbox — only the gateway (port 81) is reachable from the user's browser.
+- Fix: submit API now returns a gateway-relative demoFormUrl (/?XTransformPort=3005&...) for the frontend to open. The gateway reverse-proxies it to localhost:3005.
+- Playwright needs an absolute URL for page.goto(), so the API sends a separate playwrightFormUrl (http://localhost:3005/...) to the Playwright service internally.
+- Fixed demo form socket.io connection: uses window.location.origin (the gateway) instead of constructing :81 manually. Works because the page is now served through the gateway.
+- Added 3-second "waiting_user" delay before step 5 (filling): emits "Opening the live form tab — switch to it to watch the form fill up. Starting in 3 seconds…" so the user has time to focus the demo form tab.
+- Verified: 11 fields filled live (cardholder_name, email, mobile, card_last4, card_name, merchant, txn_date, txn_amount, claim_amount, incident_date, incident_desc)
+
+Stage Summary:
+- Demo form now opens through the gateway (no more ERR_CONNECTION_REFUSED)
+- 3-second delay gives the user time to switch to the form tab
+- Live filling confirmed: 11 fields populated with real values, status pill updates live
+- Lint: clean

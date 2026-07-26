@@ -382,10 +382,10 @@ function htmlPage(params: { bank: string; bankUrl?: string }): string {
         statusPill.textContent = 'Connecting…';
         statusPill.classList.add('live');
       }
-      // Connect to the Playwright service socket.io via the Caddy gateway
-      // (port 81). The gateway forwards ?XTransformPort=3004 to the service.
-      var gateway = window.location.protocol + '//' + window.location.hostname + ':81';
-      var socket = io(gateway, { path: '/', query: { XTransformPort: '3004' }, transports: ['websocket','polling'] });
+      // Connect to the Playwright service socket.io via the same gateway
+      // that served this page. window.location.origin is the gateway (port 81
+      // in production), and ?XTransformPort=3004 routes to the Playwright svc.
+      var socket = io(window.location.origin, { path: '/', query: { XTransformPort: '3004' }, transports: ['websocket','polling'] });
       socket.on('connect', function() {
         socket.emit('join', sessionId);
         if (statusPill) statusPill.textContent = 'Waiting for engine…';

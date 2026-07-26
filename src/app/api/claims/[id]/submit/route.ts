@@ -33,9 +33,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const sessionId = randomUUID();
     const bankName = claim.portalBank ?? "Your Bank";
     const portalUrl = claim.portalUrl ?? "https://www.hdfcbank.com/";
-    // Claim form demo URL — personalizes to the bank + includes the real bank
-    // URL so the demo page can link to it.
-    const demoFormUrl = `http://localhost:3005/?bank=${encodeURIComponent(bankName)}&bankUrl=${encodeURIComponent(portalUrl)}`;
+
+    // Two URLs for the claim form demo:
+    //  - playwrightFormUrl: absolute localhost:3005 URL for Playwright to
+    //    navigate to internally (page.goto needs an absolute URL).
+    //  - demoFormUrl: gateway-relative URL (/?XTransformPort=3005&...) for the
+    //    user's browser to open — only the gateway (port 81) is reachable
+    //    externally; localhost:3005 is internal to the sandbox.
+    const query = `bank=${encodeURIComponent(bankName)}&bankUrl=${encodeURIComponent(portalUrl)}`;
+    const playwrightFormUrl = `http://localhost:3005/?${query}`;
+    const demoFormUrl = `/?XTransformPort=3005&${query}`;
 
     // mark submitting
     await db.claim.update({
@@ -49,7 +56,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     // Fire the Playwright service (port 3004) via the gateway (XTransformPort query).
     // Non-blocking: we kick it off and let socket.io stream progress.
-    const runBody = { portalUrl, demoFormUrl, bankName, claimId: claim.id, fields, documents, sessionId };
+    // Send the absolute localhost:3005 URL to Playwright (it navigates internally).
+    const runBody = { portalUrl, demoFormUrl: playwrightFormUrl, bankName, claimId: claim.id, fields, documents, sessionId };
     fetch("http://localhost:3004/api/run?XTransformPort=3004", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
