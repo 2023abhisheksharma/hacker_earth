@@ -26,6 +26,8 @@
 // lets Socket.IO take over (it returns 400 for non-socket.io requests, which is
 // acceptable for a dev tool).
 
+process.env.PLAYWRIGHT_BROWSERS_PATH = "0";
+
 import { createServer, IncomingMessage, ServerResponse } from "http";
 import { Server as IOServer, Socket } from "socket.io";
 import { chromium, Browser, Page } from "playwright";

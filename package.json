@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "build": "PLAYWRIGHT_BROWSERS_PATH=0 npx playwright install chromium && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "node start-render.js",
     "lint": "eslint .",
     "db:push": "prisma db push --accept-data-loss",
